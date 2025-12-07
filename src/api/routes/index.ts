@@ -6,6 +6,8 @@ import images from "./images.ts";
 import ping from "./ping.ts";
 import token from './token.ts';
 import models from './models.ts';
+import claude from './claude.ts';
+import gemini from './gemini.ts';
 
 export default [
     {
@@ -22,6 +24,8 @@ export default [
         }
     },
     chat,
+    claude,
+    gemini,
     images,
     ping,
     token,

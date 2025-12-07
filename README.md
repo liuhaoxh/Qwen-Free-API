@@ -34,6 +34,11 @@
 
 ### 更新日志
 
+- v1.0.1 (2025-12-07)
+
+    - 重构默认首页样式和内容，修复部分描述
+    - 新增Gemini和Claude适配器
+
 - v1.0.0-fix (2025-11-23)
 
     - 修复源码中恶意代码问题,解决构建时报错问题
@@ -65,6 +70,24 @@
 **仅限自用，禁止对外提供服务或商用，避免对官方造成服务压力，否则风险自担！**
 
 ## 效果示例
+
+### 服务默认首页
+
+服务启动后，默认首页添加了接入指南和接口说明，方便快速接入，不用来回切换找文档。
+
+![index.html](./doc/index.png)
+
+### Gemini-cli接入
+
+版本添加了gemini-cli适配器，可以直接在gemini-cli中调用API。
+
+![gemini-cli](./doc/gemini-cli.png)
+
+### Claude-code接入
+
+版本添加了Claude-code适配器，可以直接在Claude-code中调用API。
+
+![claude-code](./doc/claude-code.png)
 
 ### 验明正身Demo
 
