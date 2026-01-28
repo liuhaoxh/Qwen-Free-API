@@ -31,6 +31,13 @@ const SUPPORTED_MODELS = [
         "description": "快速准确的代码生成模型"
     },
     {
+        "id": "qwen3-vl-plus",
+        "name": "Qwen3-VL-Plus",
+        "object": "model",
+        "owned_by": "qwen-free-api",
+        "description": "多模态视觉理解模型，支持图像解析"
+    },
+    {
         "id": "qwen-max-latest",
         "name": "Qwen2.5-Max",
         "object": "model",
