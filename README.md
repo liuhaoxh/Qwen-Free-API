@@ -1,3 +1,15 @@
+
+
+### 构建并推送到 Docker Hub
+
+```shell
+# 构建镜像
+docker build -t lh425769149/qwen-free-api-3vl:v1.0.0 .
+
+# 推送到 Docker Hub
+docker push lh425769149/qwen-free-api-3vl:v1.0.0
+```
+
 # Qwen AI Free 服务
 
 ## 项目说明
@@ -142,6 +154,7 @@
 ## Docker部署
 
 请准备一台具有公网IP的服务器并将8000端口开放。
+
 
 拉取镜像并启动服务
 
