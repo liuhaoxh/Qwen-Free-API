@@ -12,8 +12,8 @@
     "dist/"
   ],
   "scripts": {
-    "dev": "tsup src/index.ts --format cjs,esm --sourcemap --dts --publicDir public --watch --onSuccess \"node dist/index.js\"",
-    "start": "node dist/index.js",
+    "dev": "TZ=Asia/Shanghai tsup src/index.ts --format cjs,esm --sourcemap --dts --publicDir public --watch --onSuccess \"TZ=Asia/Shanghai node dist/index.js\"",
+    "start": "TZ=Asia/Shanghai node dist/index.js",
     "build": "tsup src/index.ts --format cjs,esm --sourcemap --dts --clean --publicDir public"
   },
   "author": "xiaoY233",

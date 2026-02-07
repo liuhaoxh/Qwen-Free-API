@@ -469,6 +469,10 @@ function checkResult(result: AxiosResponse) {
   );
 }
 
+function sanitizeSseChunk(raw: string) {
+  return raw.replace(/(^|\r?\n)\[heartbeat\](?=\r?\n|$)/g, "$1: heartbeat");
+}
+
 /**
  * 从流接收完整的消息内容
  *
@@ -542,7 +546,10 @@ async function receiveStream(stream: any, model: string = DEFAULT_MODEL): Promis
       }
     });
     // 将流数据喂给SSE转换器
-    stream.on("data", (buffer) => parser.feed(buffer.toString()));
+    stream.on("data", (buffer) => {
+      const chunk = sanitizeSseChunk(buffer.toString());
+      parser.feed(chunk);
+    });
     stream.once("error", (err) => reject(err));
     stream.once("close", () => resolve(data));
     stream.end();
@@ -657,7 +664,10 @@ function createTransStream(stream: any, model: string = DEFAULT_MODEL, endCallba
     }
   });
   // 将流数据喂给SSE转换器
-  stream.on("data", (buffer) => parser.feed(buffer.toString()));
+  stream.on("data", (buffer) => {
+    const chunk = sanitizeSseChunk(buffer.toString());
+    parser.feed(chunk);
+  });
   stream.once(
     "error",
     () => !transStream.closed && transStream.end("data: [DONE]\n\n")
@@ -723,7 +733,10 @@ async function receiveImages(
       }
     });
     // 将流数据喂给SSE转换器
-    stream.on("data", (buffer) => parser.feed(buffer.toString()));
+    stream.on("data", (buffer) => {
+      const chunk = sanitizeSseChunk(buffer.toString());
+      parser.feed(chunk);
+    });
     stream.once("error", (err) => reject(err));
     stream.once("close", () => resolve({ convId, imageUrls }));
     stream.end();

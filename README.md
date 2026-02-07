@@ -195,6 +195,20 @@ services:
     environment:
       - TZ=Asia/Shanghai
 ```
+
+### 本地 Dockerfile 构建（开发）
+
+在项目根目录执行：
+
+```shell
+./run-docker.sh
+
+# 指定端口/镜像名（可选）
+HOST_PORT=8001 IMAGE_NAME=qwen-free-api:local ./run-docker.sh
+
+# 禁用自动构建（仅运行已有镜像）
+AUTO_BUILD=0 IMAGE_NAME=your/image:tag ./run-docker.sh
+```
 ### 其他部署
 
 其他部署方式，由于未经过测试，所以不再推荐，建议还是Docker部署使用

@@ -182,6 +182,20 @@ services:
       - TZ=Asia/Shanghai
 ```
 
+### Local Dockerfile Build (Development)
+
+Run in the project root:
+
+```shell
+./run-docker.sh
+
+# Optional: override port/image name
+HOST_PORT=8001 IMAGE_NAME=qwen-free-api:local ./run-docker.sh
+
+# Disable auto-build (run only if image already exists)
+AUTO_BUILD=0 IMAGE_NAME=your/image:tag ./run-docker.sh
+```
+
 ### Other Deployment
 
 Other deployment methods are not recommended as they have not been tested. It is recommended to use Docker deployment.
