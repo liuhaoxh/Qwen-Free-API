@@ -194,6 +194,9 @@ HOST_PORT=8001 IMAGE_NAME=qwen-free-api:local ./run-docker.sh
 
 # Disable auto-build (run only if image already exists)
 AUTO_BUILD=0 IMAGE_NAME=your/image:tag ./run-docker.sh
+
+# Optional: limit container memory
+MEMORY_LIMIT=512m MEMORY_SWAP=512m ./run-docker.sh
 ```
 
 ### Other Deployment

@@ -208,6 +208,9 @@ HOST_PORT=8001 IMAGE_NAME=qwen-free-api:local ./run-docker.sh
 
 # 禁用自动构建（仅运行已有镜像）
 AUTO_BUILD=0 IMAGE_NAME=your/image:tag ./run-docker.sh
+
+# 限制容器内存（可选）
+MEMORY_LIMIT=512m MEMORY_SWAP=512m ./run-docker.sh
 ```
 ### 其他部署
 

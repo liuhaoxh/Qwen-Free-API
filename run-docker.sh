@@ -9,6 +9,8 @@ AUTO_BUILD="${AUTO_BUILD:-1}"
 DOCKERFILE_PATH="${DOCKERFILE_PATH:-Dockerfile}"
 BUILD_CONTEXT="${BUILD_CONTEXT:-.}"
 FOLLOW_LOGS="${FOLLOW_LOGS:-0}"
+MEMORY_LIMIT="${MEMORY_LIMIT:-}"
+MEMORY_SWAP="${MEMORY_SWAP:-}"
 
 if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
   if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
@@ -31,6 +33,8 @@ fi
 container_id="$(docker run -d \
   --name "${CONTAINER_NAME}" \
   --init \
+  ${MEMORY_LIMIT:+--memory "${MEMORY_LIMIT}"} \
+  ${MEMORY_SWAP:+--memory-swap "${MEMORY_SWAP}"} \
   -p "${HOST_PORT}:${CONTAINER_PORT}" \
   -e TZ=Asia/Shanghai \
   "${IMAGE_NAME}")"
