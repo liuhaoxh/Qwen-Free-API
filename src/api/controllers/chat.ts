@@ -1,5 +1,5 @@
 import { URL } from "url";
-import { PassThrough } from "stream";
+import { PassThrough, Transform } from "stream";
 import http2 from "http2";
 import path from "path";
 import _ from "lodash";
@@ -12,6 +12,7 @@ import EX from "@/api/consts/exceptions.ts";
 import { createParser } from "eventsource-parser";
 import logger from "@/lib/logger.ts";
 import util from "@/lib/util.ts";
+import config from "@/lib/config.ts";
 import { isValidModel, DEFAULT_MODEL } from "@/api/routes/models.ts";
 
 // 默认模型名称
@@ -43,6 +44,19 @@ const FAKE_HEADERS = {
 };
 // 文件最大大小
 const FILE_MAX_SIZE = 100 * 1024 * 1024;
+
+function createSizeLimitStream(maxBytes: number, errorFactory: () => Error) {
+  let bytes = 0;
+  const t = new Transform({
+    transform(chunk: Buffer, _enc, cb) {
+      bytes += chunk.length;
+      if (bytes > maxBytes) return cb(errorFactory());
+      cb(null, chunk);
+    },
+  });
+  Object.defineProperty(t, "bytesRead", { get: () => bytes });
+  return t as Transform & { bytesRead: number };
+}
 
 /**
  * 移除会话
@@ -116,7 +130,7 @@ async function createCompletion(
   }
   let session: http2.ClientHttp2Session;
   return (async () => {
-    logger.info(messages);
+    if (config.system.debug) logger.info(messages);
 
     // 提取引用文件URL并上传qwen获得引用的文件ID列表
     const refFileUrls = extractRefFileUrls(messages);
@@ -217,7 +231,7 @@ async function createCompletionStream(
   }
   let session: http2.ClientHttp2Session;
   return (async () => {
-    logger.info(messages);
+    if (config.system.debug) logger.info(messages);
 
     // 提取引用文件URL并上传qwen获得引用的文件ID列表
     const refFileUrls = extractRefFileUrls(messages);
@@ -398,7 +412,7 @@ function extractRefFileUrls(messages: any[]) {
         urls.push(v["image_url"]["url"]);
     });
   }
-  logger.info("本次请求上传：" + urls.length + "个文件");
+  if (config.system.debug) logger.info("本次请求上传：" + urls.length + "个文件");
   return urls;
 }
 
@@ -428,7 +442,7 @@ function messagesPrepare(messages: any[], refs: any[] = [], isRefConv = false) {
       }
       return content + `${message.content}\n`;
     }, "");
-    logger.info("\n透传内容：\n" + content);
+    if (config.system.debug) logger.info("\n透传内容：\n" + content);
   }
   else {
     content = messages.reduce((content, message) => {
@@ -442,7 +456,7 @@ function messagesPrepare(messages: any[], refs: any[] = [], isRefConv = false) {
         message.content
       }<|im_end|>\n`);
     }, "").replace(/\!\[.*\]\(.+\)/g, "");
-    logger.info("\n对话合并：\n" + content);
+    if (config.system.debug) logger.info("\n对话合并：\n" + content);
   }
   return [
     {
@@ -802,24 +816,42 @@ async function uploadFile(fileUrl: string, ticket: string) {
   // 预检查远程文件URL可用性
   await checkFileUrl(fileUrl);
 
-  let filename, fileData, mimeType;
+  let filename: string, fileData: any, mimeType: any;
+  let fileSize: number | undefined;
   // 如果是BASE64数据则直接转换为Buffer
   if (util.isBASE64Data(fileUrl)) {
     mimeType = util.extractBASE64DataFormat(fileUrl);
     const ext = mime.getExtension(mimeType);
     filename = `${util.uuid()}.${ext}`;
     fileData = Buffer.from(util.removeBASE64DataHeader(fileUrl), "base64");
+    fileSize = fileData.byteLength;
   }
   // 下载文件到内存，如果您的服务器内存很小，建议考虑改造为流直传到下一个接口上，避免停留占用内存
   else {
-    filename = path.basename(fileUrl);
-    ({ data: fileData } = await axios.get(fileUrl, {
-      responseType: "arraybuffer",
-      // 100M限制
-      maxContentLength: FILE_MAX_SIZE,
+    const url = new URL(fileUrl);
+    filename = path.basename(url.pathname) || `file-${util.uuid()}`;
+
+    const download = await axios.get(fileUrl, {
+      responseType: "stream",
       // 60秒超时
       timeout: 60000,
-    }));
+      validateStatus: () => true,
+    });
+    if (download.status >= 400)
+      throw new APIException(
+        EX.API_FILE_URL_INVALID,
+        `File ${fileUrl} is not valid: [${download.status}] ${download.statusText}`
+      );
+
+    const contentLength = Number(download.headers?.["content-length"]);
+    if (Number.isFinite(contentLength) && contentLength > 0) fileSize = contentLength;
+
+    const limitStream = createSizeLimitStream(FILE_MAX_SIZE, () =>
+      new APIException(EX.API_FILE_EXECEEDS_SIZE, `File ${fileUrl} exceeds size limit`)
+    );
+
+    mimeType = download.headers?.["content-type"] || mime.getType(filename);
+    fileData = download.data.pipe(limitStream);
   }
 
   // 获取文件的MIME类型
@@ -949,7 +981,7 @@ async function uploadFile(fileUrl: string, ticket: string) {
       role: "user",
       contentType: "file",
       content: url,
-      ext: { fileSize: fileData.byteLength }
+      ext: { fileSize: fileSize ?? (fileData?.byteLength || 0) }
     };
   }
 }

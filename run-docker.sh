@@ -11,6 +11,8 @@ BUILD_CONTEXT="${BUILD_CONTEXT:-.}"
 FOLLOW_LOGS="${FOLLOW_LOGS:-0}"
 MEMORY_LIMIT="${MEMORY_LIMIT:-}"
 MEMORY_SWAP="${MEMORY_SWAP:-}"
+SERVER_ENV="${SERVER_ENV:-}"
+NODE_OPTIONS="${NODE_OPTIONS:-}"
 
 if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
   if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
@@ -37,6 +39,8 @@ container_id="$(docker run -d \
   ${MEMORY_SWAP:+--memory-swap "${MEMORY_SWAP}"} \
   -p "${HOST_PORT}:${CONTAINER_PORT}" \
   -e TZ=Asia/Shanghai \
+  ${SERVER_ENV:+-e SERVER_ENV="${SERVER_ENV}"} \
+  ${NODE_OPTIONS:+-e NODE_OPTIONS="${NODE_OPTIONS}"} \
   "${IMAGE_NAME}")"
 
 echo "Started ${CONTAINER_NAME} on port ${HOST_PORT}"

@@ -13,40 +13,93 @@ const isVercelEnv = process.env.VERCEL;
 
 class LogWriter {
 
-    #buffers = [];
+    #stream: any = null;
+    #currentDate = "";
+    #dropping = false;
+    #droppedLines = 0;
 
     constructor() {
         !isVercelEnv && fs.ensureDirSync(config.system.logDirPath);
-        !isVercelEnv && this.work();
+        if (!isVercelEnv) {
+            this.#currentDate = util.getDateString();
+            this.#ensureStream();
+        }
     }
 
-    push(content) {
-        const buffer = Buffer.from(content);
-        this.#buffers.push(buffer);
+    #logFilePath() {
+        return path.join(config.system.logDirPath, `/${util.getDateString()}.log`);
     }
 
-    writeSync(buffer) {
-        !isVercelEnv && fs.appendFileSync(path.join(config.system.logDirPath, `/${util.getDateString()}.log`), buffer);
+    #ensureStream() {
+        if (isVercelEnv) return;
+        const today = util.getDateString();
+        if (this.#stream && this.#currentDate === today) return;
+
+        try {
+            if (this.#stream) {
+                this.#stream.end();
+                this.#stream = null;
+            }
+        } catch { /* ignore */ }
+
+        this.#currentDate = today;
+        const filePath = this.#logFilePath();
+        this.#stream = fs.createWriteStream(filePath, { flags: "a" });
+        this.#stream.on("error", (err: any) => console.error("Log stream error:", err));
     }
 
-    async write(buffer) {
-        !isVercelEnv && await fs.appendFile(path.join(config.system.logDirPath, `/${util.getDateString()}.log`), buffer);
+    writeSync(buffer: Buffer) {
+        if (isVercelEnv) return;
+        fs.appendFileSync(this.#logFilePath(), buffer);
+    }
+
+    push(content: string) {
+        if (isVercelEnv) return;
+        this.#ensureStream();
+        if (!this.#stream) return;
+
+        // When disk is slow, Node will buffer writes in memory. Avoid unbounded growth by dropping
+        // log lines until the stream drains.
+        if (this.#dropping) {
+            this.#droppedLines++;
+            return;
+        }
+
+        const ok = this.#stream.write(content);
+        if (!ok) {
+            this.#dropping = true;
+            this.#droppedLines = 0;
+            this.#stream.once("drain", () => {
+                const dropped = this.#droppedLines;
+                this.#dropping = false;
+                this.#droppedLines = 0;
+                if (dropped > 0) {
+                    try {
+                        this.#stream && this.#stream.write(`[logger] dropped ${dropped} log lines due to backpressure\n`);
+                    } catch { /* ignore */ }
+                }
+            });
+        }
     }
 
     flush() {
-        if(!this.#buffers.length) return;
-        !isVercelEnv && fs.appendFileSync(path.join(config.system.logDirPath, `/${util.getDateString()}.log`), Buffer.concat(this.#buffers));
+        if (isVercelEnv) return;
+        this.#ensureStream();
+        // Best-effort: write stream handles flushing itself; nothing buffered here.
     }
 
-    work() {
-        if (!this.#buffers.length) return setTimeout(this.work.bind(this), config.system.logWriteInterval);
-        const buffer = Buffer.concat(this.#buffers);
-        this.#buffers = [];
-        this.write(buffer)
-        .finally(() => setTimeout(this.work.bind(this), config.system.logWriteInterval))
-        .catch(err => console.error("Log write error:", err));
+    destroy() {
+        try {
+            this.flush();
+            this.#stream && this.#stream.end();
+        } catch { /* ignore */ }
+        this.#stream = null;
     }
 
+    // backward-compat for existing call sites
+    destory() {
+        this.destroy();
+    }
 }
 
 class LogText {
@@ -166,13 +219,13 @@ class Logger {
     error(...params) {
         const content = new LogText(Logger.Level.Error, ...params).toString();
         console.error(content[Logger.LevelColor[Logger.Level.Error]]);
-        this.#writer.push(content);
+        this.#writer.push(content + "\n");
     }
 
     fatal(...params) {
         const content = new LogText(Logger.Level.Fatal, ...params).toString();
         console.error(content[Logger.LevelColor[Logger.Level.Fatal]]);
-        this.#writer.push(content);
+        this.#writer.push(content + "\n");
     }
 
     destory() {

@@ -8,6 +8,9 @@ RUN yarn install --registry https://registry.npmmirror.com/ && yarn run build
 
 FROM dockerproxy.com/library/node:lts-alpine
 
+ENV SERVER_ENV=prod
+ENV NODE_ENV=production
+
 COPY --from=build_image /app/configs /app/configs
 COPY --from=build_image /app/package.json /app/package.json
 COPY --from=build_image /app/dist /app/dist
