@@ -1,4 +1,7 @@
-FROM dockerproxy.com/library/node:lts AS build_image
+ARG NODE_LTS_IMAGE=node:lts
+ARG NODE_LTS_ALPINE_IMAGE=node:lts-alpine
+
+FROM ${NODE_LTS_IMAGE} AS build_image
 
 WORKDIR /app
 
@@ -6,7 +9,7 @@ COPY . /app
 
 RUN yarn install --registry https://registry.npmmirror.com/ && yarn run build
 
-FROM dockerproxy.com/library/node:lts-alpine
+FROM ${NODE_LTS_ALPINE_IMAGE}
 
 ENV SERVER_ENV=prod
 ENV NODE_ENV=production

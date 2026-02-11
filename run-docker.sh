@@ -13,6 +13,8 @@ MEMORY_LIMIT="${MEMORY_LIMIT:-}"
 MEMORY_SWAP="${MEMORY_SWAP:-}"
 SERVER_ENV="${SERVER_ENV:-}"
 NODE_OPTIONS="${NODE_OPTIONS:-}"
+NODE_LTS_IMAGE="${NODE_LTS_IMAGE:-}"
+NODE_LTS_ALPINE_IMAGE="${NODE_LTS_ALPINE_IMAGE:-}"
 
 if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
   if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
@@ -29,7 +31,12 @@ if ! docker image inspect "${IMAGE_NAME}" >/dev/null 2>&1; then
   fi
 
   echo "Image ${IMAGE_NAME} not found locally; building..."
-  docker build -t "${IMAGE_NAME}" -f "${DOCKERFILE_PATH}" "${BUILD_CONTEXT}"
+  docker build \
+    ${NODE_LTS_IMAGE:+--build-arg NODE_LTS_IMAGE="${NODE_LTS_IMAGE}"} \
+    ${NODE_LTS_ALPINE_IMAGE:+--build-arg NODE_LTS_ALPINE_IMAGE="${NODE_LTS_ALPINE_IMAGE}"} \
+    -t "${IMAGE_NAME}" \
+    -f "${DOCKERFILE_PATH}" \
+    "${BUILD_CONTEXT}"
 fi
 
 container_id="$(docker run -d \
